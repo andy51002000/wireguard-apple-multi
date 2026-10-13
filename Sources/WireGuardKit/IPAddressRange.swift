@@ -112,4 +112,25 @@ extension IPAddressRange {
         }
         fatalError()
     }
+
+    public var isDefaultRoute: Bool {
+        return networkPrefixLength == 0
+    }
+
+    public func overlaps(with other: IPAddressRange) -> Bool {
+        let addressBytes = address.rawValue
+        let otherAddressBytes = other.address.rawValue
+        guard addressBytes.count == otherAddressBytes.count else { return false }
+
+        let sharedPrefixLength = min(networkPrefixLength, other.networkPrefixLength)
+        let completeBytes = Int(sharedPrefixLength / 8)
+        if completeBytes > 0 && addressBytes.prefix(completeBytes) != otherAddressBytes.prefix(completeBytes) {
+            return false
+        }
+
+        let remainingBits = Int(sharedPrefixLength % 8)
+        guard remainingBits > 0 else { return true }
+        let mask = UInt8.max << (8 - remainingBits)
+        return (addressBytes[completeBytes] & mask) == (otherAddressBytes[completeBytes] & mask)
+    }
 }

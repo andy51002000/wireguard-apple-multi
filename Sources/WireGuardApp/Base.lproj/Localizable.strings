@@ -277,6 +277,12 @@
 "alertTunnelActivationErrorTunnelIsNotInactiveTitle" = "Activation in progress";
 "alertTunnelActivationErrorTunnelIsNotInactiveMessage" = "The tunnel is already active or in the process of being activated";
 
+"alertMultiTunnelValidationTitle" = "Unsafe multi-tunnel configuration";
+"alertMultiTunnelValidationDNSMessage" = "WireGuard Multi only activates tunnels with no DNS servers or DNS search domains.";
+"alertMultiTunnelValidationOnDemandMessage" = "WireGuard Multi requires On-Demand to be disabled so every activation passes conflict validation.";
+"alertMultiTunnelValidationDefaultRouteMessage (%@)" = "Default route %@ is not allowed. Use non-overlapping split-tunnel AllowedIPs.";
+"alertMultiTunnelValidationOverlapMessage (%@,%@,%@)" = "AllowedIPs %@ overlaps %@ in the active tunnel ‘%@’. Adjust the routes before activating both tunnels.";
+
 // Tunnel management error alerts on system error
 
 /* The alert message that goes with the following titles would be

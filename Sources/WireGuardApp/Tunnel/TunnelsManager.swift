@@ -24,7 +24,9 @@ class TunnelsManager {
     weak var tunnelsListDelegate: TunnelsManagerListDelegate?
     weak var activationDelegate: TunnelsManagerActivationDelegate?
     private var statusObservationToken: NotificationToken?
+    #if os(iOS)
     private var waiteeObservationToken: NSKeyValueObservation?
+    #endif
     private var configurationsObservationToken: NotificationToken?
 
     init(tunnelProviders: [NETunnelProviderManager]) {
@@ -363,6 +365,13 @@ class TunnelsManager {
     }
 
     func setOnDemandEnabled(_ isOnDemandEnabled: Bool, on tunnel: TunnelContainer, completionHandler: @escaping (TunnelsManagerError?) -> Void) {
+        #if os(macOS)
+        guard !isOnDemandEnabled else {
+            activationDelegate?.tunnelActivationAttemptFailed(tunnel: tunnel, error: .multiTunnelRequiresOnDemandOff)
+            completionHandler(nil)
+            return
+        }
+        #endif
         let tunnelProviderManager = tunnel.tunnelProvider
         let isCurrentlyEnabled = (tunnelProviderManager.isOnDemandEnabled && tunnelProviderManager.isEnabled)
         guard isCurrentlyEnabled != isOnDemandEnabled else {
@@ -421,11 +430,12 @@ class TunnelsManager {
         return tunnels.first { $0.status == .waiting }
     }
 
+    func tunnelsInOperation() -> [TunnelContainer] {
+        return tunnels.filter { $0.status != .inactive && $0.status != .deactivating }
+    }
+
     func tunnelInOperation() -> TunnelContainer? {
-        if let waitingTunnelObject = waitingTunnel() {
-            return waitingTunnelObject
-        }
-        return tunnels.first { $0.status != .inactive }
+        return tunnelsInOperation().first
     }
 
     func startActivation(of tunnel: TunnelContainer) {
@@ -435,6 +445,12 @@ class TunnelsManager {
             return
         }
 
+        #if os(macOS)
+        if let validationError = multiTunnelValidationError(for: tunnel) {
+            activationDelegate?.tunnelActivationAttemptFailed(tunnel: tunnel, error: validationError)
+            return
+        }
+        #elseif os(iOS)
         if let alreadyWaitingTunnel = tunnels.first(where: { $0.status == .waiting }) {
             alreadyWaitingTunnel.status = .inactive
         }
@@ -447,7 +463,7 @@ class TunnelsManager {
                 if tunnelInOperation.isActivateOnDemandEnabled {
                     setOnDemandEnabled(false, on: tunnelInOperation) { [weak self] error in
                         guard error == nil else {
-                            wg_log(.error, message: "Unable to activate tunnel '\(tunnel.name)' because on-demand could not be disabled on active tunnel '\(tunnel.name)'")
+                            wg_log(.error, message: "Unable to activate tunnel '\(tunnel.name)' because on-demand could not be disabled on active tunnel '\(tunnelInOperation.name)'")
                             return
                         }
                         self?.startDeactivation(of: tunnelInOperation)
@@ -458,6 +474,7 @@ class TunnelsManager {
             }
             return
         }
+        #endif
 
         #if targetEnvironment(simulator)
         tunnel.status = .active
@@ -469,6 +486,42 @@ class TunnelsManager {
         RecentTunnelsTracker.handleTunnelActivated(tunnelName: tunnel.name)
         #endif
     }
+
+    #if os(macOS)
+    private func multiTunnelValidationError(for requestedTunnel: TunnelContainer) -> TunnelsManagerActivationAttemptError? {
+        guard let requestedConfiguration = requestedTunnel.tunnelConfiguration else {
+            return .failedWhileStarting(systemError: NEVPNError(NEVPNError.configurationInvalid))
+        }
+
+        if !requestedConfiguration.interface.dns.isEmpty || !requestedConfiguration.interface.dnsSearch.isEmpty {
+            return .multiTunnelRequiresNoDNS
+        }
+        if requestedTunnel.hasOnDemandRules || requestedTunnel.isActivateOnDemandEnabled {
+            return .multiTunnelRequiresOnDemandOff
+        }
+
+        let requestedRanges = requestedConfiguration.peers.flatMap { $0.allowedIPs }
+        if let defaultRoute = requestedRanges.first(where: { $0.isDefaultRoute }) {
+            return .multiTunnelDisallowsDefaultRoute(route: defaultRoute.stringRepresentation)
+        }
+
+        for activeTunnel in tunnelsInOperation() where activeTunnel !== requestedTunnel {
+            guard let activeConfiguration = activeTunnel.tunnelConfiguration else { continue }
+            if activeTunnel.hasOnDemandRules || activeTunnel.isActivateOnDemandEnabled {
+                return .multiTunnelRequiresOnDemandOff
+            }
+            let activeRanges = activeConfiguration.peers.flatMap { $0.allowedIPs }
+            for requestedRange in requestedRanges {
+                if let activeRange = activeRanges.first(where: { requestedRange.overlaps(with: $0) }) {
+                    return .multiTunnelAllowedIPsOverlap(activeTunnelName: activeTunnel.name,
+                                                         requestedRange: requestedRange.stringRepresentation,
+                                                         activeRange: activeRange.stringRepresentation)
+                }
+            }
+        }
+        return nil
+    }
+    #endif
 
     func startDeactivation(of tunnel: TunnelContainer) {
         tunnel.isAttemptingActivation = false
@@ -484,6 +537,7 @@ class TunnelsManager {
         tunnels.forEach { $0.refreshStatus() }
     }
 
+    #if os(iOS)
     private func activateWaitingTunnelOnDeactivation(of tunnel: TunnelContainer) {
         waiteeObservationToken = tunnel.observe(\.status) { [weak self] tunnel, _ in
             guard let self = self else { return }
@@ -495,6 +549,7 @@ class TunnelsManager {
             }
         }
     }
+    #endif
 
     private func startObservingTunnelStatuses() {
         statusObservationToken = NotificationCenter.default.observe(name: .NEVPNStatusDidChange, object: nil, queue: OperationQueue.main) { [weak self] statusChangeNotification in

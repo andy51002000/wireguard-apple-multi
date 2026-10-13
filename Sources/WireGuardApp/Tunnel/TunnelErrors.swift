@@ -31,6 +31,10 @@ enum TunnelsManagerError: WireGuardAppError {
 
 enum TunnelsManagerActivationAttemptError: WireGuardAppError {
     case tunnelIsNotInactive
+    case multiTunnelRequiresNoDNS
+    case multiTunnelRequiresOnDemandOff
+    case multiTunnelDisallowsDefaultRoute(route: String)
+    case multiTunnelAllowedIPsOverlap(activeTunnelName: String, requestedRange: String, activeRange: String)
     case failedWhileStarting(systemError: Error) // startTunnel() throwed
     case failedWhileSaving(systemError: Error) // save config after re-enabling throwed
     case failedWhileLoading(systemError: Error) // reloading config throwed
@@ -40,6 +44,14 @@ enum TunnelsManagerActivationAttemptError: WireGuardAppError {
         switch self {
         case .tunnelIsNotInactive:
             return (tr("alertTunnelActivationErrorTunnelIsNotInactiveTitle"), tr("alertTunnelActivationErrorTunnelIsNotInactiveMessage"))
+        case .multiTunnelRequiresNoDNS:
+            return (tr("alertMultiTunnelValidationTitle"), tr("alertMultiTunnelValidationDNSMessage"))
+        case .multiTunnelRequiresOnDemandOff:
+            return (tr("alertMultiTunnelValidationTitle"), tr("alertMultiTunnelValidationOnDemandMessage"))
+        case .multiTunnelDisallowsDefaultRoute(let route):
+            return (tr("alertMultiTunnelValidationTitle"), tr(format: "alertMultiTunnelValidationDefaultRouteMessage (%@)", route))
+        case .multiTunnelAllowedIPsOverlap(let activeTunnelName, let requestedRange, let activeRange):
+            return (tr("alertMultiTunnelValidationTitle"), tr(format: "alertMultiTunnelValidationOverlapMessage (%@,%@,%@)", requestedRange, activeRange, activeTunnelName))
         case .failedWhileStarting(let systemError),
              .failedWhileSaving(let systemError),
              .failedWhileLoading(let systemError),
