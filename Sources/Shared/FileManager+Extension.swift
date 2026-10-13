@@ -32,7 +32,12 @@ extension FileManager {
     }
 
     static var networkExtensionLastErrorFileURL: URL? {
-        return sharedFolderURL?.appendingPathComponent("last-error.txt")
+        return networkExtensionLastErrorFileURL(activationAttemptId: nil)
+    }
+
+    static func networkExtensionLastErrorFileURL(activationAttemptId: String?) -> URL? {
+        let fileName = activationAttemptId.map { "last-error-\($0).txt" } ?? "last-error.txt"
+        return sharedFolderURL?.appendingPathComponent(fileName)
     }
 
     static var loginHelperTimestampURL: URL? {

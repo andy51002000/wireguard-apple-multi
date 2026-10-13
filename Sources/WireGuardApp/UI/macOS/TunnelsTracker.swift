@@ -12,28 +12,32 @@ class TunnelsTracker {
 
     weak var statusMenu: StatusMenu? {
         didSet {
-            statusMenu?.currentTunnel = currentTunnel
+            statusMenu?.tunnelsInOperation = tunnelsInOperation
         }
     }
     weak var statusItemController: StatusItemController? {
         didSet {
-            statusItemController?.currentTunnel = currentTunnel
+            statusItemController?.tunnelsInOperation = tunnelsInOperation
         }
     }
     weak var manageTunnelsRootVC: ManageTunnelsRootViewController?
 
     private var tunnelsManager: TunnelsManager
     private var tunnelStatusObservers = [AnyObject]()
-    private(set) var currentTunnel: TunnelContainer? {
+    private(set) var tunnelsInOperation = [TunnelContainer]() {
         didSet {
-            statusMenu?.currentTunnel = currentTunnel
-            statusItemController?.currentTunnel = currentTunnel
+            statusMenu?.tunnelsInOperation = tunnelsInOperation
+            statusItemController?.tunnelsInOperation = tunnelsInOperation
         }
+    }
+
+    var currentTunnel: TunnelContainer? {
+        return tunnelsInOperation.first
     }
 
     init(tunnelsManager: TunnelsManager) {
         self.tunnelsManager = tunnelsManager
-        currentTunnel = tunnelsManager.tunnelInOperation()
+        tunnelsInOperation = tunnelsManager.tunnelsInOperation()
 
         for index in 0 ..< tunnelsManager.numberOfTunnels() {
             let tunnel = tunnelsManager.tunnel(at: index)
@@ -45,16 +49,13 @@ class TunnelsTracker {
         tunnelsManager.activationDelegate = self
     }
 
+    private func refreshTunnelsInOperation() {
+        tunnelsInOperation = tunnelsManager.tunnelsInOperation()
+    }
+
     func observeStatus(of tunnel: TunnelContainer) -> AnyObject {
-        return tunnel.observe(\.status) { [weak self] tunnel, _ in
-            guard let self = self else { return }
-            if tunnel.status == .deactivating || tunnel.status == .inactive {
-                if self.currentTunnel == tunnel {
-                    self.currentTunnel = self.tunnelsManager.tunnelInOperation()
-                }
-            } else {
-                self.currentTunnel = tunnel
-            }
+        return tunnel.observe(\.status) { [weak self] _, _ in
+            self?.refreshTunnelsInOperation()
         }
     }
 }
@@ -62,9 +63,6 @@ class TunnelsTracker {
 extension TunnelsTracker: TunnelsManagerListDelegate {
     func tunnelAdded(at index: Int) {
         let tunnel = tunnelsManager.tunnel(at: index)
-        if tunnel.status != .deactivating && tunnel.status != .inactive {
-            self.currentTunnel = tunnel
-        }
         let statusObservationToken = observeStatus(of: tunnel)
         tunnelStatusObservers.insert(statusObservationToken, at: index)
 
@@ -86,6 +84,7 @@ extension TunnelsTracker: TunnelsManagerListDelegate {
 
     func tunnelRemoved(at index: Int, tunnel: TunnelContainer) {
         tunnelStatusObservers.remove(at: index)
+        refreshTunnelsInOperation()
 
         statusMenu?.removeTunnelMenuItem(at: index)
         manageTunnelsRootVC?.tunnelsListVC?.tunnelRemoved(at: index)

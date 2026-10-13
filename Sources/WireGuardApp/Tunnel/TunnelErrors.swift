@@ -6,6 +6,8 @@ import NetworkExtension
 enum TunnelsManagerError: WireGuardAppError {
     case tunnelNameEmpty
     case tunnelAlreadyExistsWithThatName
+    case multiTunnelRequiresOnDemandOff
+    case unsafeMultiTunnelConfiguration(error: TunnelsManagerActivationAttemptError)
     case systemErrorOnListingTunnels(systemError: Error)
     case systemErrorOnAddTunnel(systemError: Error)
     case systemErrorOnModifyTunnel(systemError: Error)
@@ -17,6 +19,10 @@ enum TunnelsManagerError: WireGuardAppError {
             return (tr("alertTunnelNameEmptyTitle"), tr("alertTunnelNameEmptyMessage"))
         case .tunnelAlreadyExistsWithThatName:
             return (tr("alertTunnelAlreadyExistsWithThatNameTitle"), tr("alertTunnelAlreadyExistsWithThatNameMessage"))
+        case .multiTunnelRequiresOnDemandOff:
+            return (tr("alertMultiTunnelValidationTitle"), tr("alertMultiTunnelValidationOnDemandMessage"))
+        case .unsafeMultiTunnelConfiguration(let error):
+            return error.alertText
         case .systemErrorOnListingTunnels(let systemError):
             return (tr("alertSystemErrorOnListingTunnelsTitle"), systemError.localizedUIString)
         case .systemErrorOnAddTunnel(let systemError):
@@ -89,6 +95,8 @@ extension PacketTunnelProviderError: WireGuardAppError {
             return (tr("alertTunnelActivationFailureTitle"), tr("alertTunnelActivationFileDescriptorFailureMessage"))
         case .couldNotSetNetworkSettings:
             return (tr("alertTunnelActivationFailureTitle"), tr("alertTunnelActivationSetNetworkSettingsMessage"))
+        case .unsafeMultiTunnelConfiguration:
+            return (tr("alertMultiTunnelValidationTitle"), tr("alertMultiTunnelProviderValidationMessage"))
         }
     }
 }

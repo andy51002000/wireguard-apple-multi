@@ -141,6 +141,13 @@ class TunnelsManager {
             return
         }
 
+        #if os(macOS)
+        guard onDemandOption == .off else {
+            completionHandler(.failure(TunnelsManagerError.multiTunnelRequiresOnDemandOff))
+            return
+        }
+        #endif
+
         let tunnelProviderManager = NETunnelProviderManager()
         tunnelProviderManager.setTunnelConfiguration(tunnelConfiguration)
         tunnelProviderManager.isEnabled = true
@@ -227,6 +234,17 @@ class TunnelsManager {
             completionHandler(TunnelsManagerError.tunnelNameEmpty)
             return
         }
+
+        #if os(macOS)
+        guard onDemandOption == .off && !shouldEnsureOnDemandEnabled else {
+            completionHandler(TunnelsManagerError.multiTunnelRequiresOnDemandOff)
+            return
+        }
+        if let validationError = multiTunnelValidationError(for: tunnelConfiguration, excluding: tunnel) {
+            completionHandler(TunnelsManagerError.unsafeMultiTunnelConfiguration(error: validationError))
+            return
+        }
+        #endif
 
         let tunnelProviderManager = tunnel.tunnelProvider
 
@@ -441,7 +459,7 @@ class TunnelsManager {
     }
 
     func tunnelsInOperation() -> [TunnelContainer] {
-        return tunnels.filter { $0.status != .inactive && $0.status != .deactivating }
+        return tunnels.filter { $0.status != .inactive }
     }
 
     func tunnelInOperation() -> TunnelContainer? {
@@ -502,12 +520,16 @@ class TunnelsManager {
         guard let requestedConfiguration = requestedTunnel.tunnelConfiguration else {
             return .failedWhileStarting(systemError: NEVPNError(NEVPNError.configurationInvalid))
         }
-
-        if !requestedConfiguration.interface.dns.isEmpty || !requestedConfiguration.interface.dnsSearch.isEmpty {
-            return .multiTunnelRequiresNoDNS
-        }
         if requestedTunnel.hasOnDemandRules || requestedTunnel.isActivateOnDemandEnabled {
             return .multiTunnelRequiresOnDemandOff
+        }
+        return multiTunnelValidationError(for: requestedConfiguration, excluding: requestedTunnel)
+    }
+
+    private func multiTunnelValidationError(for requestedConfiguration: TunnelConfiguration,
+                                            excluding requestedTunnel: TunnelContainer?) -> TunnelsManagerActivationAttemptError? {
+        if !requestedConfiguration.interface.dns.isEmpty || !requestedConfiguration.interface.dnsSearch.isEmpty {
+            return .multiTunnelRequiresNoDNS
         }
 
         let requestedRanges = requestedConfiguration.peers.flatMap { $0.allowedIPs }
@@ -616,10 +638,12 @@ class TunnelsManager {
 }
 
 private func lastErrorTextFromNetworkExtension(for tunnel: TunnelContainer) -> (title: String, message: String)? {
-    guard let lastErrorFileURL = FileManager.networkExtensionLastErrorFileURL else { return nil }
+    guard let activationAttemptId = tunnel.activationAttemptId,
+          let lastErrorFileURL = FileManager.networkExtensionLastErrorFileURL(activationAttemptId: activationAttemptId) else { return nil }
+    defer { _ = FileManager.deleteFile(at: lastErrorFileURL) }
     guard let lastErrorData = try? Data(contentsOf: lastErrorFileURL) else { return nil }
     guard let lastErrorStrings = String(data: lastErrorData, encoding: .utf8)?.splitToArray(separator: "\n") else { return nil }
-    guard lastErrorStrings.count == 2 && tunnel.activationAttemptId == lastErrorStrings[0] else { return nil }
+    guard lastErrorStrings.count == 2 && activationAttemptId == lastErrorStrings[0] else { return nil }
 
     if let extensionError = PacketTunnelProviderError(rawValue: lastErrorStrings[1]) {
         return extensionError.alertText

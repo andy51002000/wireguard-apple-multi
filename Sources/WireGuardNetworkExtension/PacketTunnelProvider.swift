@@ -28,6 +28,16 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             return
         }
 
+        #if os(macOS)
+        let hasDNS = !tunnelConfiguration.interface.dns.isEmpty || !tunnelConfiguration.interface.dnsSearch.isEmpty
+        let hasDefaultRoute = tunnelConfiguration.peers.flatMap { $0.allowedIPs }.contains { $0.isDefaultRoute }
+        guard !hasDNS && !hasDefaultRoute else {
+            errorNotifier.notify(PacketTunnelProviderError.unsafeMultiTunnelConfiguration)
+            completionHandler(PacketTunnelProviderError.unsafeMultiTunnelConfiguration)
+            return
+        }
+        #endif
+
         // Start the tunnel
         adapter.start(tunnelConfiguration: tunnelConfiguration) { adapterError in
             guard let adapterError = adapterError else {
@@ -73,7 +83,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         wg_log(.info, staticMessage: "Stopping tunnel")
 
         adapter.stop { error in
-            ErrorNotifier.removeLastErrorFile()
+            ErrorNotifier.removeLastErrorFile(activationAttemptId: nil)
 
             if let error = error {
                 wg_log(.error, message: "Failed to stop WireGuard adapter: \(error.localizedDescription)")

@@ -23,9 +23,9 @@ class StatusMenu: NSMenu {
     private var numberOfTunnelMenuItems = 0
     private var tunnelsPresentationStyle = StatusMenuTunnelsPresentationStyle.inline
 
-    var currentTunnel: TunnelContainer? {
+    var tunnelsInOperation = [TunnelContainer]() {
         didSet {
-            updateStatusMenuItems(with: currentTunnel)
+            updateStatusMenuItems(with: tunnelsInOperation)
         }
     }
     weak var windowDelegate: StatusMenuWindowDelegate?
@@ -73,49 +73,27 @@ class StatusMenu: NSMenu {
         self.deactivateMenuItem = deactivateMenuItem
     }
 
-    func updateStatusMenuItems(with tunnel: TunnelContainer?) {
+    func updateStatusMenuItems(with tunnels: [TunnelContainer]) {
         guard let statusMenuItem = statusMenuItem, let networksMenuItem = networksMenuItem, let deactivateMenuItem = deactivateMenuItem else { return }
-        guard let tunnel = tunnel else {
+        guard !tunnels.isEmpty else {
             statusMenuItem.title = tr(format: "macStatus (%@)", tr("tunnelStatusInactive"))
             networksMenuItem.title = ""
             networksMenuItem.isHidden = true
             deactivateMenuItem.isHidden = true
             return
         }
-        var statusText: String
 
-        switch tunnel.status {
-        case .waiting:
-            statusText = tr("tunnelStatusWaiting")
-        case .inactive:
-            statusText = tr("tunnelStatusInactive")
-        case .activating:
-            statusText = tr("tunnelStatusActivating")
-        case .active:
-            statusText = tr("tunnelStatusActive")
-        case .deactivating:
-            statusText = tr("tunnelStatusDeactivating")
-        case .reasserting:
-            statusText = tr("tunnelStatusReasserting")
-        case .restarting:
-            statusText = tr("tunnelStatusRestarting")
+        let activeCount = tunnels.filter { $0.status == .active }.count
+        let transitioningCount = tunnels.count - activeCount
+        statusMenuItem.title = tr(format: "macMultiTunnelStatus (%d,%d)", activeCount, transitioningCount)
+
+        let routes = tunnels.flatMap { tunnel in
+            tunnel.tunnelConfiguration?.peers.flatMap { $0.allowedIPs }.map { "\(tunnel.name): \($0.stringRepresentation)" } ?? []
         }
-
-        statusMenuItem.title = tr(format: "macStatus (%@)", statusText)
-
-        if tunnel.status == .inactive {
-            networksMenuItem.title = ""
-            networksMenuItem.isHidden = true
-        } else {
-            let allowedIPs = tunnel.tunnelConfiguration?.peers.flatMap { $0.allowedIPs }.map { $0.stringRepresentation }.joined(separator: ", ") ?? ""
-            if !allowedIPs.isEmpty {
-                networksMenuItem.title = tr(format: "macMenuNetworks (%@)", allowedIPs)
-            } else {
-                networksMenuItem.title = tr("macMenuNetworksNone")
-            }
-            networksMenuItem.isHidden = false
-        }
-        deactivateMenuItem.isHidden = tunnel.status != .active
+        networksMenuItem.title = routes.isEmpty ? tr("macMenuNetworksNone") : tr(format: "macMenuNetworks (%@)", routes.joined(separator: ", "))
+        networksMenuItem.isHidden = false
+        deactivateMenuItem.title = tr("macDeactivateAllTunnels")
+        deactivateMenuItem.isHidden = false
     }
 
     func addTunnelManagementItems() {
@@ -137,8 +115,8 @@ class StatusMenu: NSMenu {
     }
 
     @objc func deactivateClicked() {
-        if let currentTunnel = currentTunnel {
-            tunnelsManager.startDeactivation(of: currentTunnel)
+        for tunnel in tunnelsInOperation {
+            tunnelsManager.startDeactivation(of: tunnel)
         }
     }
 

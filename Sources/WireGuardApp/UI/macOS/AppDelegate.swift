@@ -68,8 +68,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func confirmAndQuit() {
         let alert = NSAlert()
         alert.messageText = tr("macConfirmAndQuitAlertMessage")
-        if let currentTunnel = tunnelsTracker?.currentTunnel, currentTunnel.status == .active || currentTunnel.status == .activating {
-            alert.informativeText = tr(format: "macConfirmAndQuitInfoWithActiveTunnel (%@)", currentTunnel.name)
+        let activeTunnelNames = tunnelsTracker?.tunnelsInOperation.map { $0.name }.joined(separator: ", ") ?? ""
+        if !activeTunnelNames.isEmpty {
+            alert.informativeText = tr(format: "macConfirmAndQuitInfoWithActiveTunnel (%@)", activeTunnelNames)
         } else {
             alert.informativeText = tr("macConfirmAndQuitAlertInfo")
         }
@@ -99,7 +100,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         registerLoginItem(shouldLaunchAtLogin: false)
-        guard let currentTunnel = tunnelsTracker?.currentTunnel, currentTunnel.status == .active || currentTunnel.status == .activating else {
+        guard let tunnelsInOperation = tunnelsTracker?.tunnelsInOperation, !tunnelsInOperation.isEmpty else {
             NSApp.terminate(nil)
             return
         }
@@ -119,7 +120,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard let currentTunnel = tunnelsTracker?.currentTunnel, currentTunnel.status == .active || currentTunnel.status == .activating else {
+        guard let tunnelsInOperation = tunnelsTracker?.tunnelsInOperation, !tunnelsInOperation.isEmpty else {
             return .terminateNow
         }
         guard let appleEvent = NSAppleEventManager.shared().currentAppleEvent else {
@@ -130,11 +131,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let alert = NSAlert()
         alert.messageText = tr("macAppStoreUpdatingAlertMessage")
-        if currentTunnel.isActivateOnDemandEnabled {
-            alert.informativeText = tr(format: "macAppStoreUpdatingAlertInfoWithOnDemand (%@)", currentTunnel.name)
-        } else {
-            alert.informativeText = tr(format: "macAppStoreUpdatingAlertInfoWithoutOnDemand (%@)", currentTunnel.name)
-        }
+        let tunnelNames = tunnelsInOperation.map { $0.name }.joined(separator: ", ")
+        alert.informativeText = tr(format: "macAppStoreUpdatingAlertInfoWithoutOnDemand (%@)", tunnelNames)
         NSApp.activate(ignoringOtherApps: true)
         if let manageWindow = manageTunnelsWindowObject {
             alert.beginSheetModal(for: manageWindow) { _ in }

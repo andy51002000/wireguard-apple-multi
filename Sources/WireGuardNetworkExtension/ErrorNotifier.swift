@@ -8,17 +8,18 @@ class ErrorNotifier {
 
     init(activationAttemptId: String?) {
         self.activationAttemptId = activationAttemptId
-        ErrorNotifier.removeLastErrorFile()
+        ErrorNotifier.removeLastErrorFile(activationAttemptId: activationAttemptId)
     }
 
     func notify(_ error: PacketTunnelProviderError) {
-        guard let activationAttemptId = activationAttemptId, let lastErrorFilePath = FileManager.networkExtensionLastErrorFileURL?.path else { return }
+        guard let activationAttemptId = activationAttemptId,
+              let lastErrorFilePath = FileManager.networkExtensionLastErrorFileURL(activationAttemptId: activationAttemptId)?.path else { return }
         let errorMessageData = "\(activationAttemptId)\n\(error)".data(using: .utf8)
         FileManager.default.createFile(atPath: lastErrorFilePath, contents: errorMessageData, attributes: nil)
     }
 
-    static func removeLastErrorFile() {
-        if let lastErrorFileURL = FileManager.networkExtensionLastErrorFileURL {
+    static func removeLastErrorFile(activationAttemptId: String? = nil) {
+        if let lastErrorFileURL = FileManager.networkExtensionLastErrorFileURL(activationAttemptId: activationAttemptId) {
             _ = FileManager.deleteFile(at: lastErrorFileURL)
         }
     }

@@ -4,7 +4,7 @@
 import Cocoa
 
 class StatusItemController {
-    var currentTunnel: TunnelContainer? {
+    var tunnelsInOperation = [TunnelContainer]() {
         didSet {
             updateStatusItemImage()
         }
@@ -27,21 +27,22 @@ class StatusItemController {
     }
 
     func updateStatusItemImage() {
-        guard let currentTunnel = currentTunnel else {
+        guard !tunnelsInOperation.isEmpty else {
             stopActivatingAnimation()
             statusItem.button?.image = statusBarImageWhenInactive
+            statusItem.button?.toolTip = "WireGuard Multi: 0 active tunnels"
             return
         }
-        switch currentTunnel.status {
-        case .inactive:
-            stopActivatingAnimation()
-            statusItem.button?.image = statusBarImageWhenInactive
-        case .active:
+        let hasTransitioningTunnel = tunnelsInOperation.contains {
+            $0.status != .active
+        }
+        if hasTransitioningTunnel {
+            startActivatingAnimation()
+        } else {
             stopActivatingAnimation()
             statusItem.button?.image = statusBarImageWhenActive
-        case .activating, .waiting, .reasserting, .restarting, .deactivating:
-            startActivatingAnimation()
         }
+        statusItem.button?.toolTip = "WireGuard Multi: \(tunnelsInOperation.count) active tunnel(s)"
     }
 
     func startActivatingAnimation() {
