@@ -46,7 +46,12 @@ class TunnelsManager {
                 return
             }
 
-            var tunnelManagers = managers ?? []
+            let expectedProviderBundleIdentifier = Bundle.main.bundleIdentifier.map { "\($0).network-extension" }
+            var tunnelManagers = (managers ?? []).filter { manager in
+                guard let expectedProviderBundleIdentifier = expectedProviderBundleIdentifier,
+                      let tunnelProtocol = manager.protocolConfiguration as? NETunnelProviderProtocol else { return false }
+                return tunnelProtocol.providerBundleIdentifier == expectedProviderBundleIdentifier
+            }
             var refs: Set<Data> = []
             var tunnelNames: Set<String> = []
             for (index, tunnelManager) in tunnelManagers.enumerated().reversed() {
@@ -90,7 +95,12 @@ class TunnelsManager {
         NETunnelProviderManager.loadAllFromPreferences { [weak self] managers, _ in
             guard let self = self else { return }
 
-            let loadedTunnelProviders = managers ?? []
+            let expectedProviderBundleIdentifier = Bundle.main.bundleIdentifier.map { "\($0).network-extension" }
+            let loadedTunnelProviders = (managers ?? []).filter { manager in
+                guard let expectedProviderBundleIdentifier = expectedProviderBundleIdentifier,
+                      let tunnelProtocol = manager.protocolConfiguration as? NETunnelProviderProtocol else { return false }
+                return tunnelProtocol.providerBundleIdentifier == expectedProviderBundleIdentifier
+            }
 
             for (index, currentTunnel) in self.tunnels.enumerated().reversed() {
                 if !loadedTunnelProviders.contains(where: { $0.isEquivalentTo(currentTunnel) }) {

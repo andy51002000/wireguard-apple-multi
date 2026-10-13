@@ -1,2 +1,9 @@
 #include "Version.xcconfig"
-#include "Developer.xcconfig"
+
+// WireGuard Multi uses a distinct application namespace so it can coexist with
+// the official WireGuard App Store app and command-line interfaces.
+APP_ID_MACOS = com.andy51002000.WireGuardMulti
+
+// Keep developer-specific signing values outside source control. Copy
+// Developer.xcconfig.template to Developer.xcconfig and set DEVELOPMENT_TEAM.
+#include? "Developer.xcconfig"

@@ -310,17 +310,17 @@
 "macMenuNetworks (%@)" = "Networks: %@";
 "macMenuNetworksNone" = "Networks: None";
 
-"macMenuTitle" = "WireGuard";
+"macMenuTitle" = "WireGuard Multi";
 "macTunnelsMenuTitle" = "Tunnels";
 "macMenuManageTunnels" = "Manage Tunnels";
 "macMenuImportTunnels" = "Import Tunnel(s) from File…";
 "macMenuAddEmptyTunnel" = "Add Empty Tunnel…";
 "macMenuViewLog" = "View Log";
 "macMenuExportTunnels" = "Export Tunnels to Zip…";
-"macMenuAbout" = "About WireGuard";
-"macMenuQuit" = "Quit WireGuard";
+"macMenuAbout" = "About WireGuard Multi";
+"macMenuQuit" = "Quit WireGuard Multi";
 
-"macMenuHideApp" = "Hide WireGuard";
+"macMenuHideApp" = "Hide WireGuard Multi";
 "macMenuHideOtherApps" = "Hide Others";
 "macMenuShowAllApps" = "Show All";
 
@@ -344,7 +344,7 @@
 
 // Mac manage tunnels window
 
-"macWindowTitleManageTunnels" = "Manage WireGuard Tunnels";
+"macWindowTitleManageTunnels" = "Manage WireGuard Multi Tunnels";
 
 "macDeleteTunnelConfirmationAlertMessage (%@)" = "Are you sure you want to delete ‘%@’?";
 "macDeleteMultipleTunnelsConfirmationAlertMessage (%d)" = "Are you sure you want to delete %d tunnels?";

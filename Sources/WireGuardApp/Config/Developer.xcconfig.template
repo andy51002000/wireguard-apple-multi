@@ -1,10 +1,11 @@
 // Developer.xcconfig
 
-// You Apple developer account's Team ID
+// Your Apple developer account's Team ID. The WireGuard Multi macOS app,
+// packet tunnel extension, login helper, and App Group must all be provisioned
+// under this team.
 DEVELOPMENT_TEAM = <team_id>
 
-// The bundle identifier of the apps.
-// Should be an app id created at developer.apple.com
-// with Network Extensions capabilty.
+// Optional iOS identity if you also build the iOS targets. The macOS identity
+// is fixed in Config.xcconfig to com.andy51002000.WireGuardMulti so it cannot
+// accidentally collide with the official WireGuard app.
 APP_ID_IOS = <app_id>
-APP_ID_MACOS = <app_id>
