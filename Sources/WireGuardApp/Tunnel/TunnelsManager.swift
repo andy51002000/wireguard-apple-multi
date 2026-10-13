@@ -240,7 +240,8 @@ class TunnelsManager {
             completionHandler(TunnelsManagerError.multiTunnelRequiresOnDemandOff)
             return
         }
-        if let validationError = multiTunnelValidationError(for: tunnelConfiguration, excluding: tunnel) {
+        if tunnel.status != .inactive,
+           let validationError = multiTunnelValidationError(for: tunnelConfiguration, excluding: tunnel) {
             completionHandler(TunnelsManagerError.unsafeMultiTunnelConfiguration(error: validationError))
             return
         }
