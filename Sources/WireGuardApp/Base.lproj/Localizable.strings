@@ -280,7 +280,7 @@
 "alertMultiTunnelValidationTitle" = "Unsafe multi-tunnel configuration";
 "alertMultiTunnelValidationDNSMessage" = "WireGuard Multi only activates tunnels with no DNS servers or DNS search domains.";
 "alertMultiTunnelValidationOnDemandMessage" = "WireGuard Multi requires On-Demand to be disabled so every activation passes conflict validation.";
-"alertMultiTunnelProviderValidationMessage" = "This configuration contains DNS settings or a default route. WireGuard Multi only starts validated split tunnels.";
+"alertMultiTunnelProviderValidationMessage" = "WireGuard Multi only starts validated split tunnels from its own app. DNS settings, default routes, On-Demand, and direct activation from System Settings are blocked.";
 "alertMultiTunnelValidationDefaultRouteMessage (%@)" = "Default route %@ is not allowed. Use non-overlapping split-tunnel AllowedIPs.";
 "alertMultiTunnelValidationOverlapMessage (%@,%@,%@)" = "AllowedIPs %@ overlaps %@ in the active tunnel ‘%@’. Adjust the routes before activating both tunnels.";
 

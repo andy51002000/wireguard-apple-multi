@@ -31,7 +31,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         #if os(macOS)
         let hasDNS = !tunnelConfiguration.interface.dns.isEmpty || !tunnelConfiguration.interface.dnsSearch.isEmpty
         let hasDefaultRoute = tunnelConfiguration.peers.flatMap { $0.allowedIPs }.contains { $0.isDefaultRoute }
-        guard !hasDNS && !hasDefaultRoute else {
+        guard activationAttemptId != nil && !hasDNS && !hasDefaultRoute else {
             errorNotifier.notify(PacketTunnelProviderError.unsafeMultiTunnelConfiguration)
             completionHandler(PacketTunnelProviderError.unsafeMultiTunnelConfiguration)
             return
